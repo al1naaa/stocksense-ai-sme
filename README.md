@@ -37,7 +37,6 @@ stocksense-ai/
 - index.html                          Main application
 - firebase.json                       Firebase Hosting config
 - .firebaserc                         Firebase project reference
-- seed_demo_data.js                   Demo data script for presentations
 - README.md                           This file
 - docs/
   - IT4IT_Summary.md                  IT4IT framework mapping + reflection
