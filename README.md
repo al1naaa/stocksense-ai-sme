@@ -1,7 +1,7 @@
 # StockSense AI
 
 AI-powered inventory management and demand forecasting tool for small and medium businesses.
-Built with Google Gemini Flash and deployed on Firebase.
+Deployed on Firebase:
 
 https://stocksense-ai-sme.web.app
 
@@ -14,7 +14,7 @@ StockSense AI helps SME owners manage their stock without spreadsheets. It autom
 **Pages:**
 - **Dashboard** - KPI overview, critical stock alerts, AI chat assistant
 - **Inventory** - Add, edit, delete products. Auto-calculated reorder thresholds
-- **Demand Forecast** - 6-month projection per product with seasonal Kazakhstan factors (Nowruz, summer, Black Friday, New Year)
+- **Demand Forecast** - 6-month projection per product with seasonal Kazakhstan factors (Nayruz, summer, Black Friday, New Year)
 - **Analytics** - Inventory health, sales ranking, category value breakdown, AI cost monitoring
 
 ---
