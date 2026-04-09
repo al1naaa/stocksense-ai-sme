@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StockSense AI - Inventory Intelligence</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyDeSQhwyGG4DZ8ikt7xNE-dGZv89zlTZEU",
+  authDomain: "stocksense-ai-sme.firebaseapp.com",
+  projectId: "stocksense-ai-sme",
+  storageBucket: "stocksense-ai-sme.firebasestorage.app",
+  messagingSenderId: "883673950626",
+  appId: "1:883673950626:web:57842b2be00cf289b52afb",
+  measurementId: "G-Z6YWD79DYC"
+};
+
+  const app = initializeApp(firebaseConfig);
+  window._fbAuth = getAuth(app);
+  window._fbDb = getFirestore(app);
+  window._fbFns = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, collection, doc, setDoc, onSnapshot, deleteDoc };
+  window._fbReady = true;
+  window.dispatchEvent(new Event("fb-ready"));
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f6f6f4;--surface:#fff;--border:#e8e8e4;
+  --text:#18181b;--muted:#71717a;--faint:#a1a1aa;
+  --accent:#2563eb;--al:#eff6ff;--ad:#1d4ed8;
+  --danger:#dc2626;--dl:#fef2f2;
+  --warn:#d97706;--wl:#fffbeb;
+  --ok:#16a34a;--ol:#f0fdf4;
+  --purple:#7c3aed;--pl:#f5f3ff;
+  --r:8px;--rl:12px;
+  --sh:0 1px 3px rgba(0,0,0,.07);
+  --shm:0 4px 16px rgba(0,0,0,.09);
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --sw:218px;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;font-size:14px}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sb{width:var(--sw);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sb-logo{padding:20px 18px 14px;border-bottom:1px solid var(--border)}
+.logo{font-size:15px;font-weight:600;letter-spacing:-.3px}.logo span{color:var(--accent)}
+.logo-sub{font-size:11px;color:var(--faint);margin-top:2px;font-family:var(--mono)}
+.sb-nav{flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:1px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:6px;cursor:pointer;color:var(--muted);font-size:13.5px;transition:all .12s;border:none;background:none;width:100%;text-align:left;font-family:var(--font)}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--al);color:var(--accent);font-weight:500}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--danger);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700}
+.sb-foot{padding:12px 14px;border-top:1px solid var(--border)}
+.u-row{display:flex;align-items:center;gap:8px}
+.u-av{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.u-name{font-size:12.5px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u-role{font-size:10px;color:var(--faint)}
+.ico-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;border-radius:4px;display:flex}
+.ico-btn:hover{background:var(--bg);color:var(--text)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px var(--ol);animation:pdot 2s infinite;flex-shrink:0}
+@keyframes pdot{0%,100%{box-shadow:0 0 0 2px var(--ol)}50%{box-shadow:0 0 0 4px var(--ol)}}
+
+/* Main */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;position:sticky;top:0;z-index:10}
+.page-title{font-size:16px;font-weight:600;letter-spacing:-.3px}
+.page-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.body{padding:22px 24px;flex:1}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .12s;font-family:var(--font);white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--ad)}
+.btn-s{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-s:hover{background:var(--bg)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl)}
+.card-head{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+.card-title{font-size:14px;font-weight:600}
+.card-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.card-body{padding:20px}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:18px 20px}
+.kpi-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.kpi-label{font-size:11.5px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.kpi-val{font-size:26px;font-weight:600;letter-spacing:-1px;margin:4px 0 3px}
+.kpi-note{font-size:12px;color:var(--faint)}
+
+/* Alerts */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:var(--r);font-size:13px;margin-bottom:8px}
+.a-d{background:var(--dl);border:1px solid #fecaca;color:var(--danger)}
+.a-w{background:var(--wl);border:1px solid #fde68a;color:var(--warn)}
+.a-s{background:var(--ol);border:1px solid #bbf7d0;color:var(--ok)}
+.a-i{background:var(--al);border:1px solid #bfdbfe;color:var(--ad)}
+.alert-ico{flex-shrink:0;margin-top:1px}
+.alert-title{font-weight:600}
+.alert-body{opacity:.85;margin-top:1px;font-size:12.5px}
+
+/* Table */
+.tbl-wrap{overflow-x:auto;border-radius:var(--rl);border:1px solid var(--border)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--bg)}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.bd{background:var(--dl);color:var(--danger)}
+.bw{background:var(--wl);color:var(--warn)}
+.bs{background:var(--ol);color:var(--ok)}
+.bn{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+.bp{background:var(--pl);color:var(--purple)}
+
+/* Chat */
+.chat-wrap{display:flex;flex-direction:column;height:380px}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%}
+.msg.u{align-self:flex-end}.msg.a{align-self:flex-start}
+.msg-bbl{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+.msg.u .msg-bbl{background:var(--accent);color:#fff;border-radius:10px 10px 2px 10px}
+.msg.a .msg-bbl{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:10px 10px 10px 2px}
+.chat-in{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border)}
+.chat-input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);outline:none;background:var(--bg)}
+.chat-input:focus{border-color:var(--accent);background:var(--surface)}
+.typing{display:flex;gap:4px;align-items:center;padding:2px 0}
+.tdot{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:ty 1.2s infinite}
+.tdot:nth-child(2){animation-delay:.2s}.tdot:nth-child(3){animation-delay:.4s}
+@keyframes ty{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* Form */
+.fg{margin-bottom:13px}
+.fl{display:block;font-size:12.5px;font-weight:500;margin-bottom:4px}
+.fi{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);outline:none;background:var(--surface)}
+.fi:focus{border-color:var(--accent)}
+select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.fhint{font-size:11px;color:var(--faint);margin-top:3px}
+.ai-suggest-btn{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--accent);background:none;border:none;cursor:pointer;padding:3px 0;font-family:var(--font);margin-top:4px}
+.ai-suggest-btn:hover{text-decoration:underline}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px}
+.modal{background:var(--surface);border-radius:var(--rl);padding:24px;width:100%;max-width:500px;box-shadow:var(--shm);max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:18px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+
+/* Auth */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:36px;width:100%;max-width:400px;box-shadow:var(--shm)}
+.auth-hd{text-align:center;margin-bottom:28px}
+.auth-logo{font-size:22px;font-weight:600;letter-spacing:-.5px}.auth-logo span{color:var(--accent)}
+.auth-tag{font-size:12px;color:var(--muted);margin-top:4px}
+.auth-tabs{display:flex;background:var(--bg);border-radius:6px;padding:3px;margin-bottom:20px}
+.auth-tab{flex:1;padding:7px;border-radius:4px;border:none;background:none;font-size:13px;font-family:var(--font);cursor:pointer;color:var(--muted);font-weight:500}
+.auth-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--sh)}
+.auth-err{background:var(--dl);border:1px solid #fecaca;color:var(--danger);padding:10px 12px;border-radius:6px;font-size:12.5px;margin-bottom:14px}
+
+/* Empty */
+.empty{text-align:center;padding:48px 24px}
+.empty-ico{width:48px;height:48px;border-radius:12px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.empty-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.empty-text{font-size:13px;color:var(--muted);max-width:280px;margin:0 auto 18px;line-height:1.6}
+
+/* Grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+/* Misc */
+.sbar{width:72px;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.sbar-f{height:100%;border-radius:3px}
+.prog{height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.prog-f{height:100%;border-radius:3px;transition:width .4s}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.spinner-d{border-color:rgba(0,0,0,.1);border-top-color:var(--accent)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.chart-box{position:relative;height:200px}
+.chart-lg{position:relative;height:240px}
+.s-wrap{position:relative}
+.s-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none}
+.s-in{width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font);outline:none;background:var(--bg)}
+.s-in:focus{border-color:var(--accent);background:var(--surface)}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.stat-row:last-child{border-bottom:none}
+.pw-wrap{position:relative}
+.pw-tog{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--faint);padding:2px;display:flex}
+.info-box{background:var(--al);border:1px solid #bfdbfe;border-radius:var(--r);padding:13px 14px;font-size:12.5px;line-height:1.6;color:var(--ad)}
+.info-box strong{display:block;font-size:13px;margin-bottom:3px}
+.quota-banner{background:#fef9ee;border:1px solid #fde68a;border-radius:var(--r);padding:14px 16px;margin-bottom:18px}
+.quota-title{font-weight:600;color:var(--warn);font-size:13.5px;margin-bottom:6px}
+.quota-text{font-size:12.5px;color:#92400e;line-height:1.6}
+.quota-text a{color:var(--accent)}
+.quota-text code{background:#fff3cd;padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.g2,.g3{grid-template-columns:1fr}}
+@media(max-width:640px){.sb{display:none}.kpi-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const API_KEY = "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";
+
+const CATEGORIES = [
+  "Electronics","Mobile Phones","Computers and Accessories",
+  "Furniture","Office Supplies","Stationery",
+  "Clothing","Food and Beverages","Beauty and Care",
+  "Sports and Outdoor","Home Appliances","Tools and Hardware",
+  "Toys and Games","Books and Media","Other"
+];
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+const I = ({n,s=16}) => {
+  const d = {
+    dash:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
+    inv:<><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></>,
+    fore:<><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></>,
+    ana:<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>,
+    out:<><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>,
+    send:<><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
+    plus:<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+    trash:<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></>,
+    alert:<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
+    check:<><polyline points="20 6 9 17 4 12"/></>,
+    search:<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+    eye:<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+    eyeoff:<><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>,
+    box:<><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></>,
+    dollar:<><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></>,
+    trend:<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>,
+    refresh:<><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></>,
+    info:<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>,
+    edit:<><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></>,
+    warn:<><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
+    ai:<><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></>,
+    close:<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
+  };
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{d[n]}</svg>;
+};
+
+// ── Gemini ───
+const QUOTA_ERR = "quota_exceeded";
+
+async function callGemini(systemPrompt, history, userMessage) {
+  const messages = [{ role: "system", content: systemPrompt }];
+  
+  for (const m of history) {
+    messages.push({
+      role: m.role === "ai" ? "assistant" : "user",
+      content: m.text
+    });
+  }
+  messages.push({ role: "user", content: userMessage });
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: messages,
+      temperature: 0.35,
+      max_tokens: 700
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    const msg = e.error?.message || "";
+
+    if (res.status === 429 || msg.includes("rate limit") || msg.includes("quota")) {
+      throw new Error(QUOTA_ERR);
+    }
+    throw new Error(msg || "Gemini API error");
+  }
+
+  const d = await res.json();
+  return d.choices?.[0]?.message?.content || "No response.";
+}
+
+// Auto-calculate smart minimum stock threshold
+// Rule: enough stock to last through lead time + 7-day buffer, based on daily sales rate
+function autoMinStock(sold30, leadDays) {
+  if (!sold30 || sold30 <= 0) return 5;
+  const dailySales = sold30 / 30;
+  return Math.max(3, Math.round(dailySales * (leadDays + 7)));
+}
+
+function buildPrompt(inventory) {
+  const enriched = inventory.map(item => {
+    const smartMin = autoMinStock(item.sold30, item.leadDays);
+    return {
+      ...item,
+      smartMinStock: smartMin,
+      daysUntilStockout: item.sold30>0 ? Math.round((item.stock/item.sold30)*30) : 999,
+      status: item.stock<=smartMin ? "CRITICAL" : item.stock<=smartMin*1.5 ? "LOW" : "OK",
+      eoqRecommended: item.price>0&&item.sold30>0 ? Math.max(1,Math.round(Math.sqrt((2*item.sold30*12*500)/(item.price*0.2)))) : 0,
+      reorderPoint: Math.round(item.sold30*item.leadDays/30)
+    };
+  });
+  return `You are StockSense AI, a practical inventory advisor for small businesses.
+
+Today: ${new Date().toDateString()}
+Inventory with smart thresholds:
+${JSON.stringify(enriched,null,2)}
+
+smartMinStock = automatically calculated safe minimum based on daily sales rate and supplier lead time.
+daysUntilStockout = days until item runs out at current sales pace.
+status: CRITICAL = at/below smartMinStock, LOW = within 1.5x, OK = healthy.
+
+Seasonal context (Kazakhstan): Jan slow | Mar Nayruz peak | Jun-Aug summer | Sep back-to-school | Nov Black Friday | Dec New Year.
+
+Rules:
+1. Max 200 words. Be specific and actionable.
+2. Only use numbers from the JSON. Never invent data.
+3. Prices in Tenge (T) with thousands separators.
+4. Respond in the same language the user writes in (English or Russian).
+5. If inventory is empty, guide user to add products first.
+6. When referencing a product, always use the exact name and "code" field from the inventory (e.g. APL-IP14-128), never invent or guess an id.
+7. Write beautiful, correct, useful and understanding for user`;
+}
+
+// ── Quota Error Banner ────────────────────────────────────────────────────────
+function QuotaBanner() {
+  return (
+    <div className="quota-banner">
+      <div className="quota-title">AI Quota Limit Reached</div>
+      <div className="quota-text">
+        The current Gemini API key has reached its free daily limit. To fix this:<br/><br/>
+        <strong>Option 1 - Wait and retry:</strong> Free tier resets every 24 hours. Try again tomorrow.<br/><br/>
+        <strong>Option 2 - Enable billing (recommended):</strong><br/>
+        1. Go to <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a><br/>
+        2. Click on your project - enable billing in Google Cloud Console<br/>
+        3. Cost is under $2/month for normal SME use (Gemini 2.0 Flash pricing)<br/><br/>
+        <strong>Option 3 - Use a different key:</strong> Create a new project at <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> to get a fresh free tier quota, then update the <code>API_KEY</code> in index.html line 1.
+      </div>
+    </div>
+  );
+}
+
+// ── Auth Modal ────────────────────────────────────────────────────────────────
+function AuthModal({onAuth,onClose}) {
+  const [tab,setTab]=useState("login");
+  const [email,setEmail]=useState("");
+  const [pw,setPw]=useState("");
+  const [show,setShow]=useState(false);
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState("");
+  const msgs={"auth/user-not-found":"No account found.","auth/wrong-password":"Wrong password.","auth/email-already-in-use":"Email already registered.","auth/weak-password":"Password must be 6+ characters.","auth/invalid-credential":"Invalid email or password.","auth/invalid-email":"Invalid email."};
+  const go=async()=>{
+    if(!email||!pw){setErr("Fill in both fields.");return}
+    if(!window._fbReady){setErr("Firebase not configured.");return}
+    setLoading(true);setErr("");
+    try{
+      const fn=tab==="login"?window._fbFns.signInWithEmailAndPassword:window._fbFns.createUserWithEmailAndPassword;
+      const c=await fn(window._fbAuth,email,pw);
+      onAuth(c.user);
+    }catch(e){setErr(msgs[e.code]||e.message)}
+    setLoading(false);
+  };
+  return (
+    <div style={{padding:32}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <div className="auth-logo" style={{fontSize:18}}>Stock<span>Sense</span> AI</div>
+          <div style={{fontSize:12,color:"var(--muted)",marginTop:3}}>Sign in to save your data to the cloud</div>
+        </div>
+        {onClose&&<button className="ico-btn" onClick={onClose}><I n="close" s={16}/></button>}
+      </div>
+      <div className="auth-tabs">
+        <button className={`auth-tab ${tab==="login"?"active":""}`} onClick={()=>{setTab("login");setErr("")}}>Sign In</button>
+        <button className={`auth-tab ${tab==="register"?"active":""}`} onClick={()=>{setTab("register");setErr("")}}>Create Account</button>
+      </div>
+      {err&&<div className="auth-err">{err}</div>}
+      <div className="fg">
+        <label className="fl">Email address</label>
+        <input className="fi" type="email" placeholder="owner@mybusiness.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()}/>
+      </div>
+      <div className="fg">
+        <label className="fl">Password</label>
+        <div className="pw-wrap">
+          <input className="fi" type={show?"text":"password"} placeholder="••••••••" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go()} style={{paddingRight:36}}/>
+          <button className="pw-tog" onClick={()=>setShow(v=>!v)}><I n={show?"eyeoff":"eye"} s={14}/></button>
+        </div>
+      </div>
+      <button className="btn btn-p" style={{width:"100%",justifyContent:"center",marginTop:4}} onClick={go} disabled={loading}>
+        {loading?<span className="spinner"/>:(tab==="login"?"Sign In":"Create Account")}
+      </button>
+      <div style={{marginTop:16,padding:"12px 14px",background:"var(--bg)",borderRadius:"var(--r)",border:"1px solid var(--border)"}}>
+        <div style={{fontSize:11,fontWeight:600,color:"var(--muted)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:6}}>Demo account</div>
+        <div style={{fontSize:12.5,color:"var(--text)",lineHeight:1.8}}>
+          Login: <span style={{fontFamily:"var(--mono)",fontWeight:500}}>test@test.kz</span><br/>
+          Password: <span style={{fontFamily:"var(--mono)",fontWeight:500}}>test123</span>
+        </div>
+        <button onClick={()=>{setEmail("test@test.kz");setPw("test123");setTab("login");}} style={{marginTop:8,fontSize:12,color:"var(--accent)",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"var(--font)"}}>
+          Fill in automatically
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function Dashboard({inventory,finops,setFinops}) {
+  const [msgs,setMsgs]=useState([{role:"ai",text:inventory.length===0
+    ?"Welcome to StockSense AI. Your inventory is empty. Go to the Inventory page and add your products - then I can analyze stock levels, alert you to shortages, and help you plan reorders."
+    :"Hello. I can see your current inventory. Ask me anything - what to reorder urgently, forecast for upcoming season, or which products are at risk."}]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [quotaErr,setQuotaErr]=useState(false);
+  const endRef=useRef(null);
+  const chartRef=useRef(null);
+  const chartInst=useRef(null);
+
+  const criticalItems = inventory.filter(i=>i.stock<=autoMinStock(i.sold30,i.leadDays));
+  const lowItems = inventory.filter(i=>{const m=autoMinStock(i.sold30,i.leadDays);return i.stock>m&&i.stock<=m*1.5});
+  const totalVal=inventory.reduce((s,i)=>s+i.stock*i.price,0);
+  const totalSold=inventory.reduce((s,i)=>s+i.sold30,0);
+
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[msgs,loading]);
+
+  useEffect(()=>{
+    if(!chartRef.current||inventory.length===0)return;
+    if(chartInst.current)chartInst.current.destroy();
+    const top5=[...inventory].sort((a,b)=>b.sold30-a.sold30).slice(0,5);
+    chartInst.current=new Chart(chartRef.current,{
+      type:"bar",
+      data:{labels:top5.map(i=>i.name.length>16?i.name.slice(0,14)+"...":i.name),datasets:[{label:"Sold (30d)",data:top5.map(i=>i.sold30),backgroundColor:"#2563eb",borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:"#f0f0ee"}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
+    });
+    return()=>chartInst.current?.destroy();
+  },[inventory]);
+
+  const send=async()=>{
+    if(!input.trim())return;
+    const u=input.trim();setInput("");
+    setMsgs(m=>[...m,{role:"user",text:u}]);
+    setLoading(true);setQuotaErr(false);
+    try{
+      const reply=await callGemini(buildPrompt(inventory),msgs,u);
+      setMsgs(m=>[...m,{role:"ai",text:reply}]);
+      const tokens=Math.ceil((buildPrompt(inventory).length+u.length+reply.length)/4);
+      setFinops(f=>({...f,calls:f.calls+1,tokens:f.tokens+tokens,cost:(parseFloat(f.cost)+tokens*0.000000075).toFixed(4)}));
+    }catch(e){
+      if(e.message===QUOTA_ERR){setQuotaErr(true);setMsgs(m=>[...m,{role:"ai",text:"The API quota limit has been reached. See the message above for how to fix this."}]);}
+      else setMsgs(m=>[...m,{role:"ai",text:`Error: ${e.message}`}]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="body">
+      {quotaErr&&<QuotaBanner/>}
+      <div className="kpi-grid">
+        <div className="kpi"><div className="kpi-ico" style={{background:var_al}}><I n="box" s={16}/></div><div className="kpi-label">Total Products</div><div className="kpi-val">{inventory.length}</div><div className="kpi-note">{inventory.length===0?"Add your first product":"in your inventory"}</div></div>
+        <div className="kpi"><div className="kpi-ico" style={{background:"var(--dl)"}}><I n="alert" s={16}/></div><div className="kpi-label">Need Reorder</div><div className="kpi-val" style={{color:criticalItems.length>0?"var(--danger)":"var(--ok)"}}>{criticalItems.length}</div><div className="kpi-note" style={{color:criticalItems.length>0?"var(--danger)":"var(--faint)"}}>{criticalItems.length>0?"Order immediately":lowItems.length>0?`${lowItems.length} items running low`:"All levels healthy"}</div></div>
+        <div className="kpi"><div className="kpi-ico" style={{background:"var(--ol)"}}><I n="dollar" s={16}/></div><div className="kpi-label">Inventory Value</div><div className="kpi-val" style={{fontSize:totalVal>0?20:26}}>{totalVal>0?`T ${(totalVal/1000000).toFixed(1)}M`:"-"}</div><div className="kpi-note">Total stock value (Tenge)</div></div>
+        <div className="kpi"><div className="kpi-ico" style={{background:"var(--wl)"}}><I n="trend" s={16}/></div><div className="kpi-label">Sold This Month</div><div className="kpi-val">{totalSold>0?totalSold:"-"}</div><div className="kpi-note">Units across all products</div></div>
+      </div>
+
+      {criticalItems.map(item=>{
+        const days=item.sold30>0?Math.round((item.stock/item.sold30)*30):null;
+        return <div key={item.id} className="alert a-d"><div className="alert-ico"><I n="alert" s={14}/></div><div><div className="alert-title">{item.name} - Order Now</div><div className="alert-body">{item.stock} units left{days!==null?` - runs out in about ${days} days`:""} at current sales pace.</div></div></div>;
+      })}
+      {lowItems.map(item=>(
+        <div key={item.id} className="alert a-w"><div className="alert-ico"><I n="warn" s={14}/></div><div><div className="alert-title">{item.name} - Running Low</div><div className="alert-body">{item.stock} units left. Consider reordering soon (delivery takes {item.leadDays} days).</div></div></div>
+      ))}
+
+      <div className="g2" style={{gap:16,marginTop:(criticalItems.length||lowItems.length)?16:0}}>
+        <div className="card">
+          <div className="card-head"><div><div className="card-title">AI Assistant</div><div className="card-sub">Ask anything about your inventory</div></div><div className="dot"/></div>
+          <div className="chat-wrap">
+            <div className="chat-msgs">
+              {msgs.map((m,i)=><div key={i} className={`msg ${m.role==="user"?"u":"a"}`}><div className="msg-bbl">{m.text}</div></div>)}
+              {loading&&<div className="msg a"><div className="msg-bbl"><div className="typing"><div className="tdot"/><div className="tdot"/><div className="tdot"/></div></div></div>}
+              <div ref={endRef}/>
+            </div>
+            <div className="chat-in">
+              <input className="chat-input" placeholder="What should I reorder before next week?" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!loading&&send()} disabled={loading}/>
+              <button className="btn btn-p btn-sm" onClick={send} disabled={loading||!input.trim()}>
+                {loading?<span className="spinner" style={{width:13,height:13}}/>:<I n="send" s={13}/>}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-head"><div className="card-title">Top Selling Products</div><div className="card-sub">Last 30 days</div></div>
+          {inventory.length===0?<div className="empty" style={{padding:32}}><div className="empty-ico"><I n="trend" s={20}/></div><div className="empty-title">No data yet</div><div className="empty-text">Add products to see your sales chart here.</div></div>:<div className="card-body"><div className="chart-box"><canvas ref={chartRef}/></div></div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Hack for inline style var reference
+const var_al = "var(--al)";
+
+// ── Inventory ─────────────────────────────────────────────────────────────────
+function Inventory({inventory,setInventory,user,db,saveItemToCloud,deleteItemFromCloud}) {
+  const [search,setSearch]=useState("");
+  const [catF,setCatF]=useState("All");
+  const [showModal,setShowModal]=useState(false);
+  const [editItem,setEditItem]=useState(null);
+  const [suggestingMin,setSuggestingMin]=useState(false);
+  const EMPTY={name:"",productCode:"",category:CATEGORIES[0],stock:"",maxStock:"",price:"",sold30:"",leadDays:"7"};
+  const [form,setForm]=useState(EMPTY);
+
+  const filtered=inventory.filter(i=>{
+    const q=search.toLowerCase();
+    return (!q||i.name.toLowerCase().includes(q)||(i.productCode||"").toLowerCase().includes(q))&&(catF==="All"||i.category===catF);
+  });
+  const usedCats=["All",...Array.from(new Set(inventory.map(i=>i.category)))];
+
+  const getStatus=i=>{
+    const m=autoMinStock(i.sold30,i.leadDays);
+    if(i.stock<=m)return{label:"Order Now",cls:"bd"};
+    if(i.stock<=m*1.5)return{label:"Running Low",cls:"bw"};
+    if(i.maxStock>0&&i.stock>=i.maxStock*0.9)return{label:"Overstocked",cls:"bp"};
+    return{label:"In Stock",cls:"bs"};
+  };
+
+  const save=async()=>{
+    if(!form.name.trim())return;
+    const sold=+form.sold30||0;
+    const lead=+form.leadDays||7;
+    const item={id:editItem?.id||`item_${Date.now()}`,name:form.name.trim(),productCode:form.productCode.trim(),category:form.category,stock:+form.stock||0,maxStock:+form.maxStock||0,price:+form.price||0,sold30:sold,leadDays:lead};
+    const updated=editItem?inventory.map(i=>i.id===item.id?item:i):[...inventory,item];
+    setInventory(updated);
+    if(saveItemToCloud)saveItemToCloud(item);
+    setShowModal(false);setEditItem(null);setForm(EMPTY);
+  };
+
+  const openEdit=item=>{setEditItem(item);setForm({name:item.name,productCode:item.productCode||"",category:item.category,stock:String(item.stock),maxStock:String(item.maxStock),price:String(item.price),sold30:String(item.sold30),leadDays:String(item.leadDays)});setShowModal(true)};
+  const del=async id=>{setInventory(inventory.filter(i=>i.id!==id));if(deleteItemFromCloud)deleteItemFromCloud(id);};
+  const f=(k,v)=>setForm(p=>({...p,[k]:v}));
+
+  // Smart min stock tooltip value
+
+  return (
+    <div className="body">
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        <div className="s-wrap" style={{flex:"1 1 200px"}}>
+          <span className="s-ico"><I n="search" s={13}/></span>
+          <input className="s-in" placeholder="Search by name or product code..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        </div>
+        <select className="fi" style={{width:"auto"}} value={catF} onChange={e=>setCatF(e.target.value)}>
+          {usedCats.map(c=><option key={c}>{c}</option>)}
+        </select>
+        <button className="btn btn-p" onClick={()=>{setForm(EMPTY);setEditItem(null);setShowModal(true)}}><I n="plus" s={14}/>Add Product</button>
+      </div>
+
+      {inventory.length===0?(
+        <div className="card"><div className="empty">
+          <div className="empty-ico"><I n="box" s={22}/></div>
+          <div className="empty-title">Your inventory is empty</div>
+          <div className="empty-text">Add your first product. Just enter the name, how many you have, and how many you sell per month - the AI will automatically determine when stock is getting low.</div>
+          <button className="btn btn-p" onClick={()=>{setForm(EMPTY);setEditItem(null);setShowModal(true)}}><I n="plus" s={14}/>Add First Product</button>
+        </div></div>
+      ):(
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead><tr>
+              <th>Product Name</th><th>Code</th><th>Category</th>
+              <th>In Stock</th><th>Level</th><th>Status</th>
+              <th>Price (T)</th><th>Sold/mo</th><th>Runs out in</th><th>Lead</th><th></th>
+            </tr></thead>
+            <tbody>
+              {filtered.map(item=>{
+                const st=getStatus(item);
+                const pct=item.maxStock>0?Math.min(100,Math.round(item.stock/item.maxStock*100)):null;
+                const days=item.sold30>0?Math.round((item.stock/item.sold30)*30):null;
+                const fc=st.cls==="bd"?"var(--danger)":st.cls==="bw"?"var(--warn)":st.cls==="bp"?"var(--purple)":"var(--ok)";
+                return (
+                  <tr key={item.id}>
+                    <td style={{fontWeight:500,maxWidth:180}}>{item.name}</td>
+                    <td style={{fontFamily:"var(--mono)",fontSize:12,color:"var(--muted)"}}>{item.productCode||"-"}</td>
+                    <td><span className="badge bn">{item.category}</span></td>
+                    <td>
+                      <div style={{fontFamily:"var(--mono)",fontWeight:600}}>{item.stock.toLocaleString()}</div>
+                    </td>
+                    <td>{pct!==null?(
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <div className="sbar"><div className="sbar-f" style={{width:`${pct}%`,background:fc}}/></div>
+                        <span style={{fontSize:11,color:"var(--faint)",fontFamily:"var(--mono)"}}>{pct}%</span>
+                      </div>
+                    ):"-"}</td>
+                    <td><span className={`badge ${st.cls}`}>{st.label}</span></td>
+                    <td style={{fontFamily:"var(--mono)"}}>{item.price.toLocaleString()}</td>
+                    <td style={{fontFamily:"var(--mono)"}}>{item.sold30}</td>
+                    <td style={{fontFamily:"var(--mono)",color:days!==null&&days<=7?"var(--danger)":days!==null&&days<=14?"var(--warn)":"var(--muted)"}}>{days!==null?`${days} days`:"-"}</td>
+                    <td style={{fontFamily:"var(--mono)",color:"var(--muted)"}}>{item.leadDays}d</td>
+                    <td><div style={{display:"flex",gap:4}}><button className="ico-btn" onClick={()=>openEdit(item)}><I n="edit" s={13}/></button><button className="ico-btn" onClick={()=>del(item.id)}><I n="trash" s={13}/></button></div></td>
+                  </tr>
+                );
+              })}
+              {filtered.length===0&&<tr><td colSpan={11}><div className="empty" style={{padding:28}}><div className="empty-title">Nothing found</div></div></td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showModal&&(
+        <div className="overlay" onClick={e=>e.target===e.currentTarget&&(setShowModal(false),setEditItem(null))}>
+          <div className="modal">
+            <div className="modal-title">{editItem?"Edit Product":"Add New Product"}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 14px"}}>
+              <div className="fg" style={{gridColumn:"1/3"}}>
+                <label className="fl">Product Name *</label>
+                <input className="fi" placeholder="e.g. Samsung Galaxy A55" value={form.name} onChange={e=>f("name",e.target.value)}/>
+              </div>
+              <div className="fg">
+                <label className="fl">Product Code (optional)</label>
+                <input className="fi" placeholder="e.g. SAM-A55" value={form.productCode} onChange={e=>f("productCode",e.target.value)}/>
+              </div>
+              <div className="fg">
+                <label className="fl">Category</label>
+                <select className="fi" value={form.category} onChange={e=>f("category",e.target.value)}>
+                  {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="fg">
+                <label className="fl">Units sold per month</label>
+                <input className="fi" type="number" placeholder="0" value={form.sold30} onChange={e=>f("sold30",e.target.value)}/>
+                <div className="fhint">How many units you typically sell in 30 days</div>
+              </div>
+              <div className="fg">
+                <label className="fl">Supplier delivery time (days)</label>
+                <input className="fi" type="number" placeholder="7" value={form.leadDays} onChange={e=>f("leadDays",e.target.value)}/>
+                <div className="fhint">Days from order placement to delivery</div>
+              </div>
+              <div className="fg">
+                <label className="fl">Current stock (units in warehouse)</label>
+                <input className="fi" type="number" placeholder="0" value={form.stock} onChange={e=>f("stock",e.target.value)}/>
+              </div>
+              <div className="fg">
+                <label className="fl">Maximum capacity (units)</label>
+                <input className="fi" type="number" placeholder="0" value={form.maxStock} onChange={e=>f("maxStock",e.target.value)}/>
+                <div className="fhint">Maximum you want to store (optionally - for overstock alerts)</div>
+              </div>
+              <div className="fg" style={{gridColumn:"1/3"}}>
+                <label className="fl">Price per unit (Tenge)</label>
+                <input className="fi" type="number" placeholder="0" value={form.price} onChange={e=>f("price",e.target.value)}/>
+              </div>
+            </div>
+            <div className="info-box" style={{marginTop:4}}>
+              <strong>How low-stock alerts work</strong>
+              The system automatically calculates a safe minimum based on your monthly sales and delivery time. No manual threshold needed - just enter your sales data and it handles the rest.
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-s" onClick={()=>{setShowModal(false);setEditItem(null)}}>Cancel</button>
+              <button className="btn btn-p" onClick={save}>{editItem?"Save Changes":"Add Product"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Forecast ──────────────────────────────────────────────────────────────────
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_FULL=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const SEA_FACTOR=[0.85,0.80,1.25,1.10,1.00,1.15,1.20,1.10,1.30,1.05,1.35,1.40];
+const SEA_REASON=["Post-holiday slowdown","Slow season","Nayruz peak (March 21-23)","Spring restock","Normal demand","Summer begins","Peak summer","Summer continues","Back to school/office","Normal demand","Black Friday","New Year peak"];
+
+function Forecast({inventory,finops,setFinops}) {
+  const [sel,setSel]=useState("");
+  const [insight,setInsight]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [quotaErr,setQuotaErr]=useState(false);
+  const [showTip,setShowTip]=useState(true);
+  const chartRef=useRef(null);const chartInst=useRef(null);
+
+  useEffect(()=>{if(!sel&&inventory.length>0)setSel(inventory[0].id)},[inventory]);
+
+  const item=inventory.find(i=>i.id===sel);
+  const curMonth=new Date().getMonth();
+  const fMonths=Array.from({length:6},(_,i)=>{
+    const mi=(curMonth+i)%12;
+    return{name:MONTHS[mi],fullName:MONTH_FULL[mi],units:item?Math.round(item.sold30*SEA_FACTOR[mi]):0,factor:SEA_FACTOR[mi],reason:SEA_REASON[mi],mi};
+  });
+
+  useEffect(()=>{
+    if(!chartRef.current||!item)return;
+    if(chartInst.current)chartInst.current.destroy();
+    const smartMin=autoMinStock(item.sold30,item.leadDays);
+    chartInst.current=new Chart(chartRef.current,{
+      type:"bar",
+      data:{
+        labels:fMonths.map(m=>m.name),
+        datasets:[
+          {label:"Expected sales (units)",data:fMonths.map(m=>m.units),backgroundColor:fMonths.map(m=>m.factor>=1.2?"rgba(220,38,38,.8)":m.factor>=1.0?"rgba(217,119,6,.7)":"rgba(37,99,235,.7)"),borderRadius:4},
+          {label:"Current stock",data:Array(6).fill(item.stock),type:"line",borderColor:"#16a34a",borderDash:[5,4],fill:false,pointRadius:0,borderWidth:2},
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:"bottom",labels:{font:{size:11},padding:12}},
+          tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.raw} units`}}},
+        scales:{y:{beginAtZero:true,grid:{color:"#f0f0ee"},title:{display:true,text:"Units",font:{size:11},color:"#71717a"}},x:{grid:{display:false}}}
+      }
+    });
+    return()=>chartInst.current?.destroy();
+  },[sel,inventory]);
+
+  const getInsight=async()=>{
+    if(!item)return;
+    setLoading(true);setInsight("");setQuotaErr(false);
+    try{
+      const r=await callGemini(buildPrompt(inventory),[],"Give me a demand forecast analysis for \""+item.name+"\". Include: 1) which of the next 6 months will have highest demand and why, 2) exact recommended reorder quantity and when to order, 3) one key risk to watch. Be specific.");
+      setInsight(r);
+      const t=Math.ceil((buildPrompt(inventory).length+r.length)/4);
+      setFinops(f=>({...f,calls:f.calls+1,tokens:f.tokens+t,cost:(parseFloat(f.cost)+t*0.000000075).toFixed(4)}));
+    }catch(e){
+      if(e.message===QUOTA_ERR)setQuotaErr(true);
+      else setInsight("Error: "+e.message);
+    }
+    setLoading(false);
+  };
+
+  const eoq=item&&item.price>0&&item.sold30>0?Math.max(1,Math.round(Math.sqrt((2*item.sold30*12*500)/(item.price*0.2)))):0;
+  const smartMin=item?autoMinStock(item.sold30,item.leadDays):0;
+  const reorderPoint=item?Math.round(item.sold30*item.leadDays/30):0;
+  const daysLeft=item&&item.sold30>0?Math.round(item.stock/item.sold30*30):null;
+  const nextCritical=item?fMonths.findIndex(m=>m.units>item.stock):-1;
+
+  if(inventory.length===0)return(
+    <div className="body"><div className="card"><div className="empty">
+      <div className="empty-ico"><I n="fore" s={22}/></div>
+      <div className="empty-title">No products to forecast</div>
+      <div className="empty-text">Add products in the Inventory section. Then you will see a 6-month demand forecast with seasonal peaks for each item.</div>
+    </div></div></div>
+  );
+
+  return (
+    <div className="body">
+      {quotaErr&&<QuotaBanner/>}
+      {showTip&&(
+        <div className="alert a-i" style={{marginBottom:16,position:"relative"}}>
+          <div className="alert-ico"><I n="info" s={14}/></div>
+          <div><div className="alert-title">How to read this page</div>
+          <div className="alert-body">Select a product below. The chart shows how many units you are expected to sell each month based on your current sales rate and seasonal patterns. The green line is your current stock - when bars rise above it, you may run out. Red bars = peak months, yellow = normal, blue = slow.</div></div>
+          <button onClick={()=>setShowTip(false)} style={{position:"absolute",right:10,top:10,background:"none",border:"none",cursor:"pointer",color:"inherit",opacity:.5,padding:2,display:"flex"}}><I n="close" s={13}/></button>
+        </div>
+      )}
+
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <select className="fi" style={{maxWidth:340}} value={sel} onChange={e=>{setSel(e.target.value);setInsight("")}}>
+          {inventory.map(i=><option key={i.id} value={i.id}>{i.name}</option>)}
+        </select>
+        <button className="btn btn-p" onClick={getInsight} disabled={loading}>
+          {loading?<><span className="spinner" style={{width:13,height:13}}/>Analyzing...</>:<><I n="ai" s={14}/>AI Analysis</>}
+        </button>
+      </div>
+
+      {item&&(
+        <>
+          {/* At-a-glance summary cards */}
+          <div className="g3" style={{marginBottom:16}}>
+            <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+              <div style={{fontSize:11,fontWeight:600,color:"var(--muted)",textTransform:"uppercase",letterSpacing:".05em"}}>Stock right now</div>
+              <div style={{fontSize:22,fontWeight:600,margin:"5px 0 2px",color:item.stock<=smartMin?"var(--danger)":"var(--text)"}}>{item.stock} units</div>
+              <div style={{fontSize:12,color:"var(--muted)"}}>{daysLeft!==null?`Lasts approx. ${daysLeft} days at current pace`:"No sales data yet"}</div>
+            </div>
+            <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+              <div style={{fontSize:11,fontWeight:600,color:"var(--muted)",textTransform:"uppercase",letterSpacing:".05em"}}>Order when stock drops to</div>
+              <div style={{fontSize:22,fontWeight:600,margin:"5px 0 2px",color:"var(--warn)"}}>{reorderPoint} units</div>
+              <div style={{fontSize:12,color:"var(--muted)"}}>Covers {item.leadDays}-day delivery wait</div>
+            </div>
+            <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+              <div style={{fontSize:11,fontWeight:600,color:"var(--muted)",textTransform:"uppercase",letterSpacing:".05em"}}>Recommended order size</div>
+              {eoq>0?(
+                <>
+                  <div style={{fontSize:22,fontWeight:600,margin:"5px 0 2px",color:"var(--accent)"}}>{eoq} units</div>
+                  <div style={{fontSize:12,color:"var(--muted)"}}>T {(eoq*item.price).toLocaleString()} - economically optimal quantity</div>
+                </>
+              ):(
+                <>
+                  <div style={{fontSize:16,fontWeight:500,margin:"8px 0 4px",color:"var(--faint)"}}>-</div>
+                  <div style={{fontSize:12,color:"var(--faint)"}}>Add price &amp; monthly sales to calculate</div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {nextCritical>=0&&(
+            <div className="alert a-d" style={{marginBottom:12}}>
+              <div className="alert-ico"><I n="alert" s={14}/></div>
+              <div><div className="alert-title">Stock may run out in {fMonths[nextCritical].fullName}</div>
+              <div className="alert-body">Forecasted sales ({fMonths[nextCritical].units} units) will exceed your current stock ({item.stock} units). Reorder before then.</div></div>
+            </div>
+          )}
+
+          {insight&&(
+            <div className="info-box" style={{marginBottom:16,position:"relative"}}>
+              <strong>AI Analysis - {item.name}</strong>
+              {insight}
+            </div>
+          )}
+
+          <div className="g2" style={{gap:16}}>
+            {/* Chart */}
+            <div className="card">
+              <div className="card-head">
+                <div><div className="card-title">6-Month Demand Forecast</div><div className="card-sub">{item.name} - next 6 months</div></div>
+              </div>
+              <div className="card-body"><div className="chart-lg"><canvas ref={chartRef}/></div></div>
+            </div>
+
+            {/* Month breakdown */}
+            <div className="card">
+              <div className="card-head"><div className="card-title">Month-by-Month Breakdown</div><div className="card-sub">Expected sales and seasonal reason</div></div>
+              <div className="card-body" style={{padding:"14px 20px"}}>
+                {fMonths.map((m,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 0",borderBottom:"1px solid var(--border)"}}>
+                    <div style={{width:40,textAlign:"center"}}>
+                      <div style={{fontSize:11,fontWeight:600,color:"var(--muted)",textTransform:"uppercase"}}>{m.name}</div>
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12.5,color:"var(--muted)"}}>{m.reason}</div>
+                      <div className="prog" style={{marginTop:4}}><div className="prog-f" style={{width:`${Math.round(m.factor/1.4*100)}%`,background:m.factor>=1.2?"var(--danger)":m.factor>=1.0?"var(--warn)":"var(--accent)"}}/></div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontFamily:"var(--mono)",fontWeight:600,fontSize:14,color:m.units>item.stock?"var(--danger)":"var(--text)"}}>{m.units}</div>
+                      <div style={{fontSize:10.5,color:m.factor>=1.2?"var(--danger)":m.factor>=1.0?"var(--warn)":"var(--faint)"}}>{m.factor>=1.2?"Peak":m.factor>=1.0?"Normal":"Low"}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+function Analytics({inventory,finops}) {
+  const salesRef=useRef(null);const salesInst=useRef(null);
+  const healthRef=useRef(null);const healthInst=useRef(null);
+
+  const total=inventory.length;
+  const critical=inventory.filter(i=>i.stock<=autoMinStock(i.sold30,i.leadDays)).length;
+  const low=inventory.filter(i=>{const m=autoMinStock(i.sold30,i.leadDays);return i.stock>m&&i.stock<=m*1.5}).length;
+  const over=inventory.filter(i=>i.maxStock>0&&i.stock>=i.maxStock*0.9).length;
+  const healthy=total-critical-low-over;
+  const fillRate=total>0?Math.round(inventory.filter(i=>i.stock>=autoMinStock(i.sold30,i.leadDays)).length/total*100):0;
+  const totalVal=inventory.reduce((s,i)=>s+i.stock*i.price,0);
+  const totalSold=inventory.reduce((s,i)=>s+i.sold30,0);
+
+  // By category value
+  const catMap={};
+  inventory.forEach(i=>{catMap[i.category]=(catMap[i.category]||{val:0,count:0});catMap[i.category].val+=i.stock*i.price;catMap[i.category].count+=1;});
+  const cats=Object.entries(catMap).sort((a,b)=>b[1].val-a[1].val);
+
+  const sorted=[...inventory].sort((a,b)=>b.sold30-a.sold30);
+  const COLORS=["#2563eb","#16a34a","#d97706","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d","#ea580c"];
+
+  useEffect(()=>{
+    if(!salesRef.current||inventory.length===0)return;
+    if(salesInst.current)salesInst.current.destroy();
+    const top6=sorted.slice(0,6);
+    salesInst.current=new Chart(salesRef.current,{
+      type:"bar",
+      data:{labels:top6.map(i=>i.name.length>20?i.name.slice(0,18)+"...":i.name),datasets:[{label:"Units sold this month",data:top6.map(i=>i.sold30),backgroundColor:COLORS.slice(0,top6.length),borderRadius:4}]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:"#f0f0ee"}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+    });
+    return()=>salesInst.current?.destroy();
+  },[inventory]);
+
+  useEffect(()=>{
+    if(!healthRef.current||inventory.length===0)return;
+    if(healthInst.current)healthInst.current.destroy();
+    healthInst.current=new Chart(healthRef.current,{
+      type:"doughnut",
+      data:{
+        labels:["Healthy","Running Low","Need Reorder","Overstocked"],
+        datasets:[{data:[healthy,low,critical,over],backgroundColor:["#16a34a","#d97706","#dc2626","#7c3aed"],borderWidth:2,borderColor:"#fff"}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,cutout:"65%",plugins:{legend:{position:"right",onClick:(e,li,leg)=>{const i=li.index;const m=leg.chart.getDatasetMeta(0);m.data[i].hidden=!m.data[i].hidden;leg.chart.update();},labels:{font:{size:12},padding:14,generateLabels:chart=>{const d=chart.data;const m=chart.getDatasetMeta(0);return d.labels.map((l,i)=>{const h=m.data[i]&&m.data[i].hidden;return{text:`${l}: ${d.datasets[0].data[i]}`,fillStyle:h?"#d1d5db":d.datasets[0].backgroundColor[i],strokeStyle:"#fff",lineWidth:0,hidden:h,index:i}})}}}}}
+    });
+    return()=>healthInst.current?.destroy();
+  },[inventory]);
+
+  if(inventory.length===0)return(
+    <div className="body"><div className="card"><div className="empty">
+      <div className="empty-ico"><I n="ana" s={22}/></div>
+      <div className="empty-title">No data to analyze</div>
+      <div className="empty-text">Add products to your inventory and this page will show health metrics, sales rankings, and AI cost monitoring automatically.</div>
+    </div></div></div>
+  );
+
+  return (
+    <div className="body">
+      {/* KPIs */}
+      <div className="kpi-grid" style={{marginBottom:16}}>
+        <div className="kpi">
+          <div className="kpi-label">Inventory Health</div>
+          <div className="kpi-val" style={{color:fillRate>=80?"var(--ok)":fillRate>=60?"var(--warn)":"var(--danger)"}}>{fillRate}%</div>
+          <div className="prog"><div className="prog-f" style={{width:`${fillRate}%`,background:fillRate>=80?"var(--ok)":fillRate>=60?"var(--warn)":"var(--danger)"}}/></div>
+          <div className="kpi-note" style={{marginTop:4}}>{fillRate>=80?"Most items are well stocked":fillRate>=60?"Some items need attention":"Many items need reordering"}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label">Total Inventory Value</div>
+          <div className="kpi-val" style={{fontSize:20}}>T {(totalVal/1000000).toFixed(2)}M</div>
+          <div className="kpi-note">{total} products, {totalSold} sold this month</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label">Items Needing Action</div>
+          <div className="kpi-val" style={{color:(critical+low)>0?"var(--danger)":"var(--ok)"}}>{critical+low}</div>
+          <div className="kpi-note">{critical} must reorder now, {low} running low</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label">AI Queries Cost</div>
+          <div className="kpi-val" style={{fontSize:20,fontFamily:"var(--mono)"}}>$<span>{finops.cost}</span></div>
+          <div className="kpi-note">{finops.calls} questions asked this session</div>
+        </div>
+      </div>
+
+      <div className="g2" style={{gap:16,marginBottom:16}}>
+        {/* Health breakdown */}
+        <div className="card">
+          <div className="card-head"><div><div className="card-title">Stock Health Overview</div><div className="card-sub">How many products are in each status</div></div></div>
+          <div className="card-body">
+            {inventory.length>0&&<div className="chart-box"><canvas ref={healthRef}/></div>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:16}}>
+              {[
+                ["Healthy",healthy,"#16a34a","var(--ol)","#bbf7d0","Products have enough stock - no action needed"],
+                ["Running Low",low,"#d97706","var(--wl)","#fde68a","Getting low - plan a reorder soon"],
+                ["Need Reorder",critical,"#dc2626","var(--dl)","#fecaca","Stock is critically low - order immediately"],
+                ["Overstocked",over,"#7c3aed","var(--pl)","#ddd6fe","More stock than needed - slow down ordering"]
+              ].map(([l,v,c,bg,border,desc])=>(
+                <div key={l} style={{background:bg,borderRadius:"var(--r)",padding:"12px",border:`1px solid ${border}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+                    <div style={{fontWeight:600,fontSize:12.5,color:c}}>{l}</div>
+                    <div style={{fontSize:22,fontWeight:700,color:c,fontFamily:"var(--mono)",lineHeight:1}}>{v}</div>
+                  </div>
+                  <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.4}}>{desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Top sellers */}
+        <div className="card">
+          <div className="card-head"><div><div className="card-title">Top Sellers Ranking</div><div className="card-sub">Units sold per month - your best-performing products</div></div></div>
+          <div className="card-body">
+            {sorted.length>0&&<div className="chart-lg"><canvas ref={salesRef}/></div>}
+            <div style={{marginTop:14,fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+              Longer bars = higher sales velocity. Products at the top sell the fastest and need more frequent restocking. If a fast-selling product also has low stock, it should be your top reorder priority.
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      {/* Critical items list */}
+      {critical>0&&(
+        <div className="card" style={{marginBottom:16}}>
+          <div className="card-head"><div><div className="card-title">Items That Need Reordering Now</div><div className="card-sub">Sorted by urgency - most critical first</div></div></div>
+          <div className="card-body">
+            {[...inventory].filter(i=>i.stock<=autoMinStock(i.sold30,i.leadDays)).sort((a,b)=>{const da=a.sold30>0?a.stock/a.sold30:999,db=b.sold30>0?b.stock/b.sold30:999;return da-db}).map(item=>{
+              const days=item.sold30>0?Math.round(item.stock/item.sold30*30):null;
+              return (
+                <div key={item.id} style={{background:"var(--dl)",border:"1px solid #fecaca",borderRadius:"var(--r)",padding:"12px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:13,color:"var(--danger)"}}>{item.name}</div>
+                    <div style={{fontSize:12,color:"var(--danger)",opacity:.8,marginTop:2}}>{item.stock} units left - {days!==null?`stockout in ${days} days`:"no sales data"}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontFamily:"var(--mono)",fontWeight:700,fontSize:18,color:"var(--danger)"}}>{days!==null?`${days}d`:"!"}</div>
+                    <div style={{fontSize:11,color:"var(--muted)"}}>days left</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* FinOps */}
+      <div className="card">
+        <div className="card-head"><div><div className="card-title">AI Cost Monitoring</div><div className="card-sub">Track how much the AI assistant is costing you per session</div></div></div>
+        <div className="card-body">
+          <div className="g3" style={{marginBottom:14}}>
+            {[["Questions asked",finops.calls,"this session"],["Tokens processed",finops.tokens.toLocaleString(),"~"+Math.ceil(finops.tokens/1000)+"K tokens"],["Cost so far","$"+finops.cost,"Gemini 2.0 Flash rate"]].map(([l,v,s])=>(
+              <div key={l} style={{background:"var(--bg)",borderRadius:"var(--r)",padding:"14px"}}>
+                <div style={{fontSize:11,color:"var(--muted)",fontWeight:600,textTransform:"uppercase",letterSpacing:".05em"}}>{l}</div>
+                <div style={{fontSize:20,fontWeight:600,margin:"4px 0 2px",fontFamily:"var(--mono)"}}>{v}</div>
+                <div style={{fontSize:11,color:"var(--faint)"}}>{s}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"var(--bg)",borderRadius:"var(--r)",padding:"14px",marginBottom:12}}>
+            {[["Model used","Gemini 2.0 Flash"],["Rate","$0.075 per 1 million tokens"],["Free limit","1,500 requests per day"],["Estimated monthly cost at 50 questions/day","under $2"]].map(([k,v])=>(
+              <div key={k} className="stat-row"><span style={{color:"var(--muted)",fontSize:12.5}}>{k}</span><span style={{fontFamily:"var(--mono)",fontWeight:500,fontSize:12.5}}>{v}</span></div>
+            ))}
+          </div>
+          <div className="alert a-i">
+            <div className="alert-ico"><I n="info" s={14}/></div>
+            <div><div className="alert-title">Accuracy note</div>
+            <div className="alert-body">The AI is given your exact inventory data with each question. If it mentions a stock number - verify it against your Inventory table. The table is always correct. Any difference means the AI made an error.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App Shell ─────────────────────────────────────────────────────────────────
+function App() {
+  const [user,setUser]=useState(null);
+  const [authChecked,setAuthChecked]=useState(false);
+  const [page,setPage]=useState("dashboard");
+  const [inventory,setInventory]=useState([]);
+  const [finops,setFinops]=useState({calls:0,tokens:0,cost:"0.0000"});
+  const [db,setDb]=useState(null);
+  // guest = using locally without account; showAuth = show sign-in modal
+  const [guest,setGuest]=useState(false);
+  const [showAuth,setShowAuth]=useState(false);
+
+  useEffect(()=>{
+    const init=()=>{
+      const auth=window._fbAuth,dbI=window._fbDb;
+      setDb(dbI);
+      window._fbFns.onAuthStateChanged(auth,u=>{
+        setUser(u);setAuthChecked(true);
+        if(u){setGuest(false);loadInv(u,dbI);}
+        // if no user and firebase loaded, don't force login - let guest mode work
+      });
+    };
+    if(window._fbReady)init();
+    else window.addEventListener("fb-ready",init);
+    return()=>window.removeEventListener("fb-ready",init);
+  },[]);
+
+  // After 3.5s if still not checked, just proceed (no firebase config)
+  useEffect(()=>{const t=setTimeout(()=>{if(!authChecked)setAuthChecked(true)},3500);return()=>clearTimeout(t)},[authChecked]);
+
+  const loadInv=(u,dbI)=>{
+    if(!dbI)return;
+    try{window._fbFns.onSnapshot(window._fbFns.collection(dbI,"users",u.uid,"inventory"),snap=>{setInventory(snap.docs.map(d=>d.data()))})}catch{}
+  };
+
+  const saveItemToCloud=(item)=>{
+    if(!db||!user)return;
+    try{window._fbFns.setDoc(window._fbFns.doc(db,"users",user.uid,"inventory",item.id),item)}catch{}
+  };
+  const deleteItemFromCloud=(id)=>{
+    if(!db||!user)return;
+    try{window._fbFns.deleteDoc(window._fbFns.doc(db,"users",user.uid,"inventory",id))}catch{}
+  };
+
+  const signOut=async()=>{
+    if(window._fbReady)await window._fbFns.signOut(window._fbAuth);
+    setUser(null);setInventory([]);setGuest(true);
+  };
+
+  const onAuth=(u)=>{
+    setUser(u);setGuest(false);setShowAuth(false);
+    loadInv(u,window._fbDb);
+  };
+
+  // Show loading only briefly
+  if(!authChecked)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:"var(--muted)",gap:10}}><span className="spinner spinner-d"/>Loading...</div>;
+
+  // If firebase loaded, no user, and not guest yet - show login or let them continue as guest
+  if(!user&&!guest&&window._fbReady){
+    return(
+      <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"var(--bg)",padding:20}}>
+        <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--rl)",padding:40,width:"100%",maxWidth:440,boxShadow:"var(--shm)",textAlign:"center"}}>
+          <div className="logo" style={{justifyContent:"center",marginBottom:6,fontSize:18}}>Stock<span>Sense</span> AI</div>
+          <div style={{fontSize:13,color:"var(--muted)",marginBottom:28}}>Inventory Intelligence for Small and Medium Business</div>
+          <button className="btn btn-p" style={{width:"100%",justifyContent:"center",marginBottom:10,padding:"10px 16px",fontSize:14}} onClick={()=>setShowAuth(true)}>
+            Sign In / Create Account
+          </button>
+          <button className="btn btn-s" style={{width:"100%",justifyContent:"center",padding:"10px 16px",fontSize:14}} onClick={()=>setGuest(true)}>
+            Try Without Account
+          </button>
+          <div style={{fontSize:11.5,color:"var(--faint)",marginTop:16,lineHeight:1.6}}>
+            Guest mode: data is saved locally in your browser only.<br/>Create an account to sync across devices.
+          </div>
+        </div>
+        {showAuth&&(
+          <div className="overlay" onClick={e=>e.target===e.currentTarget&&setShowAuth(false)}>
+            <div className="modal" style={{maxWidth:420,padding:0,borderRadius:"var(--rl)",overflow:"hidden"}}>
+              <AuthModal onAuth={onAuth} onClose={()=>setShowAuth(false)}/>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const critical=inventory.filter(i=>i.stock<=autoMinStock(i.sold30,i.leadDays)).length;
+  const nav=[
+    {id:"dashboard",label:"Dashboard",icon:"dash"},
+    {id:"inventory",label:"Inventory",icon:"inv",badge:critical||null},
+    {id:"forecast",label:"Demand Forecast",icon:"fore"},
+    {id:"analytics",label:"Analytics",icon:"ana"},
+  ];
+  const titles={dashboard:{t:"Dashboard",s:"Overview of your inventory health"},inventory:{t:"Inventory",s:"Manage your products and stock levels"},forecast:{t:"Demand Forecast",s:"6-month projections with seasonal analysis"},analytics:{t:"Analytics",s:"Performance metrics and AI cost monitoring"}};
+  const email=user?.email||"Guest";
+
+  return (
+    <div className="app">
+      {showAuth&&(
+        <div className="overlay" onClick={e=>e.target===e.currentTarget&&setShowAuth(false)}>
+          <div className="modal" style={{maxWidth:420,padding:0,borderRadius:"var(--rl)",overflow:"hidden"}}>
+            <AuthModal onAuth={onAuth} onClose={()=>setShowAuth(false)}/>
+          </div>
+        </div>
+      )}
+      <aside className="sb">
+        <div className="sb-logo">
+          <div className="logo">Stock<span>Sense</span> AI</div>
+          <div className="logo-sub">Inventory Intelligence</div>
+        </div>
+        <nav className="sb-nav">
+          {nav.map(n=>(
+            <button key={n.id} className={`nav-item ${page===n.id?"active":""}`} onClick={()=>setPage(n.id)}>
+              <I n={n.icon} s={15}/>{n.label}
+              {n.badge&&<span className="nav-badge">{n.badge}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="sb-foot">
+          {user?(
+            <div className="u-row">
+              <div className="u-av">{email.slice(0,2).toUpperCase()}</div>
+              <div style={{flex:1,overflow:"hidden"}}><div className="u-name">{email}</div><div className="u-role">Business Owner</div></div>
+              <button className="ico-btn" onClick={signOut} title="Sign out"><I n="out" s={14}/></button>
+            </div>
+          ):(
+            <div>
+              <div style={{fontSize:11.5,color:"var(--faint)",marginBottom:8}}>Guest mode - data stays local</div>
+              <button className="btn btn-p btn-sm" style={{width:"100%",justifyContent:"center"}} onClick={()=>setShowAuth(true)}>
+                Save to Cloud
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+      <div className="main">
+        <div className="topbar">
+          <div><div className="page-title">{titles[page].t}</div><div className="page-sub">{titles[page].s}</div></div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}><div className="dot"/><span style={{fontSize:12,color:"var(--faint)"}}>{inventory.length} products</span></div>
+        </div>
+        {page==="dashboard"&&<Dashboard inventory={inventory} finops={finops} setFinops={setFinops}/>}
+        {page==="inventory"&&<Inventory inventory={inventory} setInventory={setInventory} user={user} db={db} saveItemToCloud={saveItemToCloud} deleteItemFromCloud={deleteItemFromCloud}/>}
+        {page==="forecast"&&<Forecast inventory={inventory} finops={finops} setFinops={setFinops}/>}
+        {page==="analytics"&&<Analytics inventory={inventory} finops={finops}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
